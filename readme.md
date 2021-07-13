@@ -44,6 +44,8 @@ export DEADBASE_DATA_ROOT=/var/data
 deadbase start # now the data is stored in /var/data instead of ./data
 ```
 
+You can now interact with Deadbase through the [Rest Api](#rest-api), the [Official GUI client](https://github.com/jikno/deadbase_gui), or the [Deno driver](https://github.com/jikno/deadbase-driver-deno).
+
 ### Root Token
 
 If the `DEADBASE_MASTER_PASSWORD` env var is set when DeadBase starts up, all create database operations will have to send up an `Authentication` header containing the value of the said env var.
