@@ -18,7 +18,7 @@ With Deno:
 deno install --unstable --allow-read --allow-write --allow-net --allow-env --name deadbase -f https://denopkg.com/jikno/deadbase/main.ts
 ```
 
-Otherwise, you can just [download your OS' supported binary](https://github.com/jikno/deadbase/releases/latest) and run it.
+<!-- Otherwise, you can just [download your OS' supported binary](https://github.com/jikno/deadbase/releases/latest) and run it. -->
 
 ## Usage
 
