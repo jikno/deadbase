@@ -5,6 +5,7 @@ import { v4 } from 'https://deno.land/std@0.97.0/uuid/mod.ts'
 
 export interface Meta {
 	auth: string | null
+	requests?: string
 }
 
 const DATA_ROOT = Deno.env.get('DEADBASE_DATA_ROOT') || join(Deno.cwd(), 'data')
@@ -67,6 +68,8 @@ export async function getDocumentById(database: string, collection: string, docu
 	const document = await readText(path)
 	if (!document) return null
 
+	await updateRequestCount(database, 1, 0)
+
 	return jsonParse(document, null)
 }
 
@@ -127,6 +130,8 @@ export async function setDocument(database: string, collection: string, document
 	const documentId = document[idField] || v4.generate()
 	await writeJson(join(getDatabasePath(database), collection, documentId), document)
 
+	await updateRequestCount(database, 0, 1)
+
 	return documentId
 }
 
@@ -152,4 +157,51 @@ export async function removeDatabase(database: string) {
 	} catch (_) {
 		// do nothing
 	}
+}
+
+async function updateRequestCount(database: string, readAddition: number, writeAddition: number) {
+	let auth: string | null
+	let requests: string
+
+	const json = (await readJson(join(getDatabasePath(database), 'meta.json'))) as unknown as Meta
+
+	if (!json.auth) {
+		auth = null
+		requests = '0:0'
+	} else {
+		auth = json.auth
+		requests = json.requests || '0:0'
+	}
+
+	const strings = requests.split(':')
+	let reads = parseInt(strings[0])
+	let writes = parseInt(strings[1])
+
+	reads += readAddition
+	writes += writeAddition
+
+	await writeJson(join(getDatabasePath(database), 'meta.json'), { auth, requests: `${reads}:${writes}` })
+}
+
+export async function getRequestsCount(database: string): Promise<[number, number]> {
+	const json = (await readJson(join(getDatabasePath(database), 'meta.json'))) as unknown as Meta
+
+	const requests: string = json.requests || '0:0'
+
+	const strings = requests.split(':')
+	const reads = parseInt(strings[0])
+	const writes = parseInt(strings[1])
+
+	return [reads, writes]
+}
+
+export async function getDatabaseSize(database: string) {
+	const info = await Deno.stat(getDatabasePath(database))
+
+	const b = info.size
+	const kb = b * 1024
+	const mb = kb * 1024
+	const gb = mb * 1024
+
+	return gb
 }

@@ -8,7 +8,7 @@ The _dead simple_ document database.
 
 2. Dynamically typed.  This improves query and developer speed.  Data model typings, if required, can be done per-language via the different drivers in a way that best suites that language.
 
-3. Efficient, simple, and logical authentication system.  A root token to create new databases, then database-specific tokens for each operation on that database.
+3. Efficient, simple, and logical authentication system.  There is a root token to create a new databases, then database-specific tokens for each operation on that database's collections and documents.
 
 ## Installation
 
@@ -48,16 +48,17 @@ You can now interact with Deadbase through the [Rest Api](#rest-api), the [Offic
 
 ### Root Token
 
-If the `DEADBASE_MASTER_PASSWORD` env var is set when DeadBase starts up, all create database operations will have to send up an `Authentication` header containing the value of the said env var.
+If the `DEADBASE_MASTER_PASSWORD` env var is set when DeadBase starts up, the following operations will have to send up an `Authentication` header containing the value of the said env var:
+
+- Creating a new database
+- Deleting an existing database
+- Changing the database-specific auth token
 
 ## Methodology
 
 Each deadbase instance can have an unlimited number of databases.  Each database can have an unlimited number of collections.  Each collection can have an unlimited number of documents.
 
-A document represents an actual document on the deadbase hard drive.  Each document must have an id.  These are the steps deadbase takes to determine the id of a particular document.
-- The value of the document property matching the `idField` query parameter is used.
-- If the `idField` query parameter was not specified, the value of the document's `id` field is used.
-- If the document doesn't have an `id` field, a random uuid is used.
+A document represents an actual document on the deadbase hard drive.  Each document must have an id.  If the document body does not have an `id` field on it, one is created automatically and given the value of a uuid.
 
 ## REST API
 
@@ -70,18 +71,26 @@ All responses are in this form:
 }
 ```
 
+### Authentication
+
+The appropriate authentication token for each operation must be passed along in the `Authentication` header.
+
+If the operation is mentioned as requiring "root authentication" the passed auth token must be the root authentication token specified when starting this service.  See [Root Token](#root-token) for more details.  If the Root Token was not set when starting deadbase, this field is not checked.
+
+Otherwise, the operation is performed on a database and the database's auth token should be used.
+
 ### Databases
 
-To create a database, send a POST request to `/` containing the following JSON payload.
+To create a database, send a POST request to `/` containing the following JSON payload.  Creating a database required [root authentication](#authentication).
 
 - _(required)_ `name`: The name of the database.  Only alpha-numeric characters (A-Z, a-z, 0-9), underscores (_), dashes (-), dollar-signs ($), and dots (.) are allowed.
-- `auth`: An authentication token that must be specified in the `Authentication` header with all operations to the database, it's collections and documents.
+- `auth`: The database's new authentication token.  Certain operations on this database will require this authentication token.
 
-If the `DEADBASE_MASTER_PASSWORD` env var was set, when starting the server, that value must be specified in the `Authentication` header of this request.
+Send a `PUT` request to `/:database_name` with the above payload to edit the database information.  Requires [root authentication](#authentication).
 
-Send a `PUT` request to `/:database_name` with the above payload to edit the database information.
+Send a `DELETE` request to `/:database_name` to delete the database.  Requires [root authentication](#authentication).
 
-Send a `DELETE` request to `/:database_name` to delete the database.
+Send a `GET` request to `/:database_name` to get the usage information of the database.  Returns a `size` field that represents the storage space the database is using in GB.  The operation also returns `requests.read` and `requests.write` fields that represent the number of read and write operations of documents in that database.
 
 Send a `GET` request to `/:database_name/collections` to get the names of all the collections in the database.
 

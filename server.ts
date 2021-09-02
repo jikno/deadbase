@@ -1,7 +1,6 @@
 import { Application, Router } from 'https://deno.land/x/oak@v7.5.0/mod.ts'
 import {
-	forbidden,
-	unAuthorized,
+	ensureRootAuth,
 	badRequest,
 	ok,
 	notFound,
@@ -12,18 +11,13 @@ import {
 } from './utils.ts'
 import * as db from './database.ts'
 
-const MASTER_PASSWORD = Deno.env.get('DEADBASE_MASTER_PASSWORD')
-
 export default function () {
 	const app = new Application()
 	const router = new Router()
 
 	router.post('/', async ctx => {
-		const auth = ctx.request.headers.get('Authentication')
-		if (MASTER_PASSWORD !== auth) {
-			if (!auth) return unAuthorized(ctx)
-			return forbidden(ctx)
-		}
+		const errorOut = ensureRootAuth(ctx)
+		if (errorOut) return errorOut()
 
 		const body = ctx.request.body()
 		if (body.type !== 'json') return badRequest(ctx, 'Expected a JSON payload')
@@ -36,8 +30,18 @@ export default function () {
 		return ok(ctx, data.name)
 	})
 
-	router.put('/:database', async ctx => {
+	router.get('/:database', async ctx => {
 		const errorOut = await ensureAuthIsValid(ctx)
+		if (errorOut) return errorOut()
+
+		const size = await db.getDatabaseSize(ctx.params.database as string)
+		const requests = await db.getRequestsCount(ctx.params.database as string)
+
+		return ok(ctx, { size, requests })
+	})
+
+	router.put('/:database', async ctx => {
+		const errorOut = ensureRootAuth(ctx)
 		if (errorOut) return errorOut()
 
 		const body = ctx.request.body()
@@ -53,7 +57,7 @@ export default function () {
 	})
 
 	router.delete('/:database', async ctx => {
-		const errorOut = await ensureAuthIsValid(ctx)
+		const errorOut = ensureRootAuth(ctx)
 		if (errorOut) return errorOut()
 
 		await db.removeDatabase(ctx.params.database as string)

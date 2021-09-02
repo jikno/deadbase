@@ -1,6 +1,8 @@
 import { Context } from 'https://deno.land/x/oak@v7.5.0/mod.ts'
 import { getMeta, getDocuments, DocumentTestValue } from './database.ts'
 
+const MASTER_PASSWORD = Deno.env.get('DEADBASE_MASTER_PASSWORD')
+
 export async function ensureAuthIsValid(ctx: Context) {
 	// deno-lint-ignore no-explicit-any
 	const databaseName = (ctx as any).params?.database
@@ -13,6 +15,14 @@ export async function ensureAuthIsValid(ctx: Context) {
 	if (!meta) return () => notFound(ctx, `database ('${databaseName}')`)
 
 	if (meta.auth !== auth.trim()) return () => forbidden(ctx)
+}
+
+export function ensureRootAuth(ctx: Context) {
+	const auth = ctx.request.headers.get('Authentication')
+	if (MASTER_PASSWORD !== auth) {
+		if (!auth) return () => unAuthorized(ctx)
+		return () => forbidden(ctx)
+	}
 }
 
 export function hasAuth(ctx: Context) {
