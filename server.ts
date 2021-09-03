@@ -89,6 +89,15 @@ export default function () {
 		return ok(ctx, collections)
 	})
 
+	router.get('/:database/collections/:collection', async ctx => {
+		const errorOut = await ensureAuthIsValid(ctx)
+		if (errorOut) return errorOut()
+
+		if (!(await collectionExists(ctx))) return notFound(ctx, `collection ("${ctx.params.collection}")`)
+
+		return ok(ctx, ctx.params.collection)
+	})
+
 	router.put('/:database/collections/:collection', async ctx => {
 		const errorOut = await ensureAuthIsValid(ctx)
 		if (errorOut) return errorOut()
