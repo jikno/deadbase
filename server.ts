@@ -49,7 +49,9 @@ export default function () {
 		const data = await body.value
 
 		if (!data.name) return badRequest(ctx, 'Expected a "name" property in payload')
-		if (await db.getCollections(data.name)) return invalidParams(ctx, 'New database name already exists')
+		if (ctx.params.database !== data.name) {
+			if (await db.getCollections(data.name)) return invalidParams(ctx, 'New database name already exists')
+		}
 
 		await db.editDatabase(ctx.params.database as string, data.name, { auth: data.auth || null })
 
