@@ -11,6 +11,28 @@ database.
 The primary downside to this service is that it can't efficiently perform filtering. It was built to be used more in client-heavy services,
 like applications, not on-demand services like websites and traditional REST apis.
 
+## Usage
+
+```ts
+import { makeDatabase } from 'https://code.jikno.com/deadbase/mod.ts'
+import { makeLocal } from 'https://code.jikno.com/deadbase/persisters/local/mod.ts'
+
+const db = makeDatabase({
+	persister: await makeLocal({ directory: 'data' }), // Or use the "dynamo" persister (persisters/dynamo/mod.ts)
+})
+
+interface User {
+	email: string
+	name: string
+}
+
+const User = db.document<User>('users')
+
+await User.setItem('some-id-here', { email: 'john.doe@example.com', name: 'John Doe' })
+await User.getItem('some-id-here') // -> { email: 'john.doe ... }
+await User.removeItem('some-id-here')
+```
+
 ## Duo-Index Strategy
 
 There are cases, though, where more than one primary key will greatly improve performance. For these, simple "index documents" can be setup.
