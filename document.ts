@@ -1,16 +1,18 @@
-import { getPersistently, removePersistently, setPersistently } from './persisters/mod.ts'
+import { Persister } from './mod.ts'
 
 export class Document<T> {
 	name: string
 	#encoder = new TextEncoder()
 	#decoder = new TextDecoder()
+	#persister: Persister
 
-	constructor(name: string) {
+	constructor(name: string, persister: Persister) {
 		this.name = name
+		this.#persister = persister
 	}
 
 	async getItem(id: string) {
-		const bytes = await getPersistently(`${this.name}/${id}`)
+		const bytes = await this.#persister.get(`${this.name}/${id}`)
 		if (!bytes) return null
 
 		const text = this.#decoder.decode(bytes)
@@ -21,14 +23,10 @@ export class Document<T> {
 		const text = JSON.stringify(content)
 		const bytes = this.#encoder.encode(text)
 
-		await setPersistently(`${this.name}/${id}`, bytes)
+		await this.#persister.set(`${this.name}/${id}`, bytes)
 	}
 
 	async removeItem(id: string) {
-		await removePersistently(`${this.name}/${id}`)
+		await this.#persister.remove(`${this.name}/${id}`)
 	}
-}
-
-export function makeDocument<T>(name: string) {
-	return new Document<T>(name)
 }

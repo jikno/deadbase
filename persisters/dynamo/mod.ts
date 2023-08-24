@@ -1,4 +1,4 @@
-import { Persister } from '../mod.ts'
+import { Persister } from '../../mod.ts'
 import { AwsSdk, Dynamo } from './deps.ts'
 
 export interface DynamoConfig {
@@ -18,37 +18,34 @@ const DYNAMO_TYPES = {
 	binary: 'B',
 } as const
 
-export function createDynamoPersister(config: DynamoConfig): Persister<Dynamo.DynamoDB> {
+export async function createDynamoPersister(config: DynamoConfig): Promise<Persister> {
+	const client = new AwsSdk.ApiFactory({
+		region: config.region,
+		credentials: { awsAccessKeyId: config.secretKeyId, awsSecretKey: config.secretKey },
+	}).makeNew(Dynamo.DynamoDB)
+
+	const output = await safelyDescribeTable(client, config.tableName)
+	if (!output.Table) {
+		await createAppropriateTable(client, config.tableName)
+		return client
+	}
+
+	if (!output.Table.AttributeDefinitions) {
+		throw new Error(`Table ${config.tableName} was already created, but expected it to have attribute definitions`)
+	}
+
+	const idDef = output.Table.AttributeDefinitions.find((attribute) => attribute.AttributeName === TABLE_FIELDS.id)
+	if (!idDef) {
+		throw new Error(`Table ${config.tableName} was already created, but expected it to have an '${TABLE_FIELDS.id}' attribute`)
+	}
+
+	if (idDef.AttributeType !== DYNAMO_TYPES.string) {
+		throw new Error(`Table ${config.tableName} was already created, but expected its '${TABLE_FIELDS.id}' field to be of type string`)
+	}
+
 	return {
 		name: 'dynamo',
-		async setup() {
-			const client = new AwsSdk.ApiFactory({
-				region: config.region,
-				credentials: { awsAccessKeyId: config.secretKeyId, awsSecretKey: config.secretKey },
-			}).makeNew(Dynamo.DynamoDB)
-
-			const output = await safelyDescribeTable(client, config.tableName)
-			if (!output.Table) {
-				await createAppropriateTable(client, config.tableName)
-				return client
-			}
-
-			if (!output.Table.AttributeDefinitions) {
-				throw new Error(`Table ${config.tableName} was already created, but expected it to have attribute definitions`)
-			}
-
-			const idDef = output.Table.AttributeDefinitions.find((attribute) => attribute.AttributeName === TABLE_FIELDS.id)
-			if (!idDef) {
-				throw new Error(`Table ${config.tableName} was already created, but expected it to have an '${TABLE_FIELDS.id}' attribute`)
-			}
-
-			if (idDef.AttributeType !== DYNAMO_TYPES.string) {
-				throw new Error(`Table ${config.tableName} was already created, but expected its '${TABLE_FIELDS.id}' field to be of type string`)
-			}
-
-			return client
-		},
-		async get(client, id) {
+		async get(id) {
 			const output = await client.getItem({
 				Key: {
 					[TABLE_FIELDS.id]: {
@@ -69,7 +66,7 @@ export function createDynamoPersister(config: DynamoConfig): Persister<Dynamo.Dy
 
 			return data
 		},
-		async set(client, id, data) {
+		async set(id, data) {
 			await client.putItem({
 				TableName: config.tableName,
 				Item: {
@@ -82,7 +79,7 @@ export function createDynamoPersister(config: DynamoConfig): Persister<Dynamo.Dy
 				},
 			})
 		},
-		async remove(client, id) {
+		async remove(id) {
 			await client.deleteItem({
 				TableName: config.tableName,
 				Key: {
