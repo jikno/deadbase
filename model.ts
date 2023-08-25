@@ -2,7 +2,7 @@ import { Persister } from './mod.ts'
 
 export type WatcherFn<T> = (newDoc: T | null) => unknown
 
-export class Document<T> {
+export class Model<T> {
 	name: string
 	#encoder = new TextEncoder()
 	#decoder = new TextDecoder()

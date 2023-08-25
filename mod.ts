@@ -1,6 +1,6 @@
-import { Document } from './document.ts'
+import { Model } from './model.ts'
 
-export * from './document.ts'
+export * from './model.ts'
 
 export interface Persister {
 	name: string
@@ -14,9 +14,9 @@ export interface MakeDatabaseParams {
 }
 
 export function makeDatabase(params: MakeDatabaseParams) {
-	function document<T>(name: string) {
-		return new Document<T>(name, params.persister)
+	function model<T>(name: string) {
+		return new Model<T>(name, params.persister)
 	}
 
-	return { document }
+	return { model }
 }
