@@ -11,7 +11,7 @@ export class Document<T> {
 		this.#persister = persister
 	}
 
-	async getItem(id: string) {
+	async get(id: string) {
 		const bytes = await this.#persister.get(`${this.name}/${id}`)
 		if (!bytes) return null
 
@@ -19,14 +19,14 @@ export class Document<T> {
 		return JSON.parse(text) as T
 	}
 
-	async setItem(id: string, content: T) {
+	async set(id: string, content: T) {
 		const text = JSON.stringify(content)
 		const bytes = this.#encoder.encode(text)
 
 		await this.#persister.set(`${this.name}/${id}`, bytes)
 	}
 
-	async removeItem(id: string) {
+	async remove(id: string) {
 		await this.#persister.remove(`${this.name}/${id}`)
 	}
 }
