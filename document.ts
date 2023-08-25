@@ -14,6 +14,7 @@ export class Document<T> {
 		this.#persister = persister
 	}
 
+	/** Get a document from this model */
 	async get(id: string) {
 		const bytes = await this.#persister.get(`${this.name}/${id}`)
 		if (!bytes) return null
@@ -22,6 +23,7 @@ export class Document<T> {
 		return JSON.parse(text) as T
 	}
 
+	/** Set a document in this model */
 	async set(id: string, content: T) {
 		const text = JSON.stringify(content)
 		const bytes = this.#encoder.encode(text)
@@ -31,12 +33,33 @@ export class Document<T> {
 		this.#notifySubscribers(id, content)
 	}
 
+	/** Remove a document from this model */
 	async remove(id: string) {
 		await this.#persister.remove(`${this.name}/${id}`)
 
+		// Let any subscribers know that the document was deleted
 		this.#notifySubscribers(id, null)
 	}
 
+	/**
+	 * Subscribe to all changes of document `id` from the model. If the document does not exist, or is removed,
+	 * fn will be called with `null`
+	 *
+	 * To unsubscribe, call the returned closure
+	 *
+	 * Example:
+	 *
+	 * ```ts
+	 * const unsubscribe = model.subscribe('some-id', doc => console.log('document updated:', doc))
+	 *
+	 * model.set('some-id', { foo: true }) // logs "document updated: { foo: true }"
+	 * model.remove('some-id') // logs "null"
+	 *
+	 * unsubscribe()
+	 * model.set('some-id', { fig: true }) // doesn't log anything because we are no longer subscribed
+	 * ```
+	 *
+	 * NOTE: `fn` is called immediately after calling `subscribe` and upon every future update */
 	subscribe(id: string, fn: WatcherFn<T>): VoidFunction {
 		const previousWatchers = this.#watchers.get(id)
 
