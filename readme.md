@@ -28,6 +28,8 @@ interface User {
 
 const User = db.document<User>('users')
 
+const unsubscribe = User.subscribe('some-id-here', (doc) => console.log(doc))
+
 await User.setItem('some-id-here', { email: 'john.doe@example.com', name: 'John Doe' })
 await User.getItem('some-id-here') // -> { email: 'john.doe ... }
 await User.removeItem('some-id-here')
