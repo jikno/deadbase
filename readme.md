@@ -26,13 +26,13 @@ interface User {
 	name: string
 }
 
-const User = db.document<User>('users')
+const User = db.model<User>('users')
 
 const unsubscribe = User.subscribe('some-id-here', (doc) => console.log(doc))
 
-await User.setItem('some-id-here', { email: 'john.doe@example.com', name: 'John Doe' })
-await User.getItem('some-id-here') // -> { email: 'john.doe ... }
-await User.removeItem('some-id-here')
+await User.set('some-id-here', { email: 'john.doe@example.com', name: 'John Doe' })
+await User.get('some-id-here') // -> { email: 'john.doe ... }
+await User.remove('some-id-here')
 ```
 
 ## Duo-Index Strategy
